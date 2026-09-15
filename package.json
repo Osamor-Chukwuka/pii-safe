@@ -1,0 +1,50 @@
+{
+  "name": "pii-guard",
+  "version": "0.1.0",
+  "description": "Local-first PII redaction for LLM prompts, logs, and Node.js apps.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
+    "build": "npm run clean && tsc -p tsconfig.json",
+    "test": "npm run build && node --test test/*.test.mjs",
+    "prepublishOnly": "npm test"
+  },
+  "keywords": [
+    "pii",
+    "redaction",
+    "llm",
+    "logging",
+    "privacy",
+    "security"
+  ],
+  "license": "MIT",
+  "sideEffects": false,
+  "peerDependencies": {
+    "pino": ">=8",
+    "winston": ">=3"
+  },
+  "peerDependenciesMeta": {
+    "pino": {
+      "optional": true
+    },
+    "winston": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "typescript": "^5.9.2"
+  }
+}
