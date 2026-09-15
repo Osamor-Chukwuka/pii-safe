@@ -11,13 +11,17 @@ function hasVariedDigits(value: string): boolean {
   return new Set(digits).size > 2;
 }
 
+function isBareElevenDigitNumber(value: string): boolean {
+  return /^\d{11}$/.test(value.trim());
+}
+
 export const phoneDetector: PIIDetector = {
   id: "phone",
   detect(input) {
     return Array.from(input.matchAll(PHONE_REGEX))
       .filter((match) => {
         const digits = digitCount(match[0]);
-        return digits >= 10 && digits <= 15 && hasVariedDigits(match[0]);
+        return digits >= 10 && digits <= 15 && hasVariedDigits(match[0]) && !isBareElevenDigitNumber(match[0]);
       })
       .map((match) => ({
         type: "phone",
