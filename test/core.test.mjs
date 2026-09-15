@@ -4,12 +4,12 @@ import { createPIIGuard } from "../dist/index.js";
 
 test("redacts strings and omits raw findings by default", () => {
   const guard = createPIIGuard();
-  const result = guard.sanitizeString("Email ada@example.com and card 4111 1111 1111 1111.");
+  const result = guard.sanitizeString("Email ada@example.com, IP 192.168.1.10, and card 4111 1111 1111 1111.");
 
-  assert.equal(result.value, "Email [REDACTED] and card [REDACTED].");
+  assert.equal(result.value, "Email [REDACTED], IP [REDACTED], and card [REDACTED].");
   assert.deepEqual(
     result.findings.map((finding) => finding.type),
-    ["email", "credit-card"]
+    ["email", "credit-card", "ip-address"]
   );
   assert.equal(result.findings.some((finding) => "raw" in finding), false);
 });

@@ -3,6 +3,7 @@ export { resolveGuard } from "./core/resolve.js";
 export {
   creditCardDetector,
   emailDetector,
+  ipDetector,
   nigeriaDetector,
   phoneDetector,
   secretsDetector
