@@ -34,6 +34,9 @@ export interface PIIDetector {
 }
 
 export interface GuardOptions {
+  /**
+   * Custom detectors are appended after the built-in detector set.
+   */
   detectors?: PIIDetector[];
   sensitiveFields?: string[];
   mode?: RedactionMode;
@@ -63,4 +66,5 @@ export interface PIIGuard {
   scan(value: unknown, options?: ScanOptions): RedactionReport;
   redact<T>(value: T, options?: RedactOptions): SanitizeResult<T>;
   sanitize<T>(value: T, options?: RedactOptions): SanitizeResult<T>;
+  sanitizeString(input: string, options?: RedactOptions): SanitizeResult<string>;
 }
