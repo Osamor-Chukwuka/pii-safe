@@ -143,3 +143,47 @@ test("detects Nigerian BVN and NIN conservatively", () => {
   assert.equal(result.value.note, "[REDACTED]");
   assert.equal(result.value.randomNumber, "12345678901");
 });
+
+test("detects conservative fintech identifiers", () => {
+  const guard = createPIIGuard();
+  const result = guard.sanitize({
+    payment: "IBAN GB82 WEST 1234 5698 7654 32",
+    note: "routing number 021000021",
+    accountNumber: "1234567890"
+  });
+
+  assert.equal(result.value.payment, "IBAN [REDACTED]");
+  assert.equal(result.value.note, "routing number [REDACTED]");
+  assert.equal(result.value.accountNumber, "[REDACTED]");
+  assert.equal(result.findings.some((finding) => finding.type === "iban"), true);
+  assert.equal(result.findings.some((finding) => finding.type === "bank-routing-number"), true);
+});
+
+test("detects conservative health identifiers", () => {
+  const guard = createPIIGuard();
+  const result = guard.sanitize({
+    npi: "1234567893",
+    note: "NPI 1234567893 SSN 123-45-6789 MRN ABC-123456",
+    randomNumber: "1234567893"
+  });
+
+  assert.equal(result.value.npi, "[REDACTED]");
+  assert.equal(result.value.note, "NPI [REDACTED] SSN [REDACTED] MRN [REDACTED]");
+  assert.equal(result.findings.some((finding) => finding.path === "$.randomNumber" && finding.type === "npi"), false);
+  assert.equal(result.findings.some((finding) => finding.type === "npi"), true);
+  assert.equal(result.findings.some((finding) => finding.type === "ssn"), true);
+  assert.equal(result.findings.some((finding) => finding.type === "medical-record-number"), true);
+});
+
+test("allowlisted larger spans protect nested detector matches", () => {
+  const guard = createPIIGuard();
+  const iban = "GB82 WEST 1234 5698 7654 32";
+  const npi = "1234567893";
+
+  const result = guard.sanitizeString(`IBAN ${iban} NPI ${npi}`, {
+    allowTypes: ["iban", "npi"]
+  });
+
+  assert.equal(result.value, `IBAN ${iban} NPI ${npi}`);
+  assert.equal(result.findings.some((finding) => finding.type === "phone" && finding.redacted === true), false);
+});

@@ -33,6 +33,7 @@ export function redactString(
   policy = config.allowPolicy
 ): SanitizeResult<string> {
   const findings = scanString(input, path, config, includeRaw, policy);
+  protectAllowedSpans(findings);
   const sorted = [...findings].sort((left, right) => (right.span?.start ?? 0) - (left.span?.start ?? 0));
   let value = input;
 
@@ -49,6 +50,26 @@ export function redactString(
   }
 
   return { value, findings };
+}
+
+function protectAllowedSpans(findings: Finding[]): void {
+  const allowedSpans = findings
+    .filter((finding) => finding.redacted === false && finding.span !== undefined)
+    .map((finding) => finding.span as { start: number; end: number });
+
+  for (const finding of findings) {
+    if (finding.redacted === false || finding.span === undefined) {
+      continue;
+    }
+
+    if (allowedSpans.some((span) => spansOverlap(span, finding.span as { start: number; end: number }))) {
+      finding.redacted = false;
+    }
+  }
+}
+
+function spansOverlap(left: { start: number; end: number }, right: { start: number; end: number }): boolean {
+  return left.start < right.end && right.start < left.end;
 }
 
 function redactAny(

@@ -14,5 +14,15 @@ export const DEFAULT_SENSITIVE_FIELDS = [
   "dob",
   "ssn",
   "bvn",
-  "nin"
+  "nin",
+  "iban",
+  "routingNumber",
+  "accountNumber",
+  "bankAccount",
+  "npi",
+  "mrn",
+  "medicalRecordNumber",
+  "patientId",
+  "memberId",
+  "policyNumber"
 ];
