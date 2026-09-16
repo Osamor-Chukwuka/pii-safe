@@ -25,6 +25,47 @@ npm test
 npm pack --dry-run
 ```
 
+## Contribution Workflow
+
+If you are not a maintainer or collaborator, fork the repository first:
+
+```bash
+git clone https://github.com/YOUR_USERNAME/pii-safe.git
+cd pii-safe
+npm install
+git checkout -b fix/descriptive-branch-name
+```
+
+Make your changes, then run:
+
+```bash
+npm test
+git status
+git add .
+git commit -m "fix: describe the change"
+git push origin fix/descriptive-branch-name
+```
+
+Open a pull request from your fork into `Osamor-Chukwuka/pii-safe:main`.
+
+If you are a maintainer or collaborator with write access, you can create a branch directly in this repository:
+
+```bash
+git clone https://github.com/Osamor-Chukwuka/pii-safe.git
+cd pii-safe
+npm install
+git checkout -b feat/descriptive-branch-name
+```
+
+Then push the branch and open a pull request:
+
+```bash
+npm test
+git add .
+git commit -m "feat: describe the change"
+git push -u origin feat/descriptive-branch-name
+```
+
 ## Development Guidelines
 
 - Keep detection local-only. Do not add network calls or external detection APIs.
