@@ -1,4 +1,5 @@
 import { DEFAULT_REPLACEMENT } from "./defaults.js";
+import { isAllowedField, mergeAllowPolicy, type AllowPolicy } from "./policy.js";
 import { createFieldFinding, isSensitiveField, scanString, type ScanConfig } from "./scan.js";
 import { stableToken } from "./tokenize.js";
 import type { Finding, PathSegment, RedactOptions, RedactionMode, SanitizeResult } from "./types.js";
@@ -14,8 +15,9 @@ export function redactValue<T>(value: T, config: RedactConfig, options: RedactOp
   const includeRaw = options.includeRawFindings ?? config.includeRawFindings;
   const mode = options.mode ?? config.mode;
   const replacement = options.replacement ?? config.replacement;
+  const policy = mergeAllowPolicy(config.allowPolicy, options);
   const seen = new WeakMap<object, unknown>();
-  const redacted = redactAny(value, [], findings, { ...config, mode, replacement }, includeRaw, seen);
+  const redacted = redactAny(value, [], findings, { ...config, mode, replacement }, includeRaw, policy, seen);
 
   return {
     value: redacted as T,
@@ -27,14 +29,15 @@ export function redactString(
   input: string,
   path: readonly PathSegment[],
   config: RedactConfig,
-  includeRaw = config.includeRawFindings
+  includeRaw = config.includeRawFindings,
+  policy = config.allowPolicy
 ): SanitizeResult<string> {
-  const findings = scanString(input, path, config, includeRaw);
+  const findings = scanString(input, path, config, includeRaw, policy);
   const sorted = [...findings].sort((left, right) => (right.span?.start ?? 0) - (left.span?.start ?? 0));
   let value = input;
 
   for (const finding of sorted) {
-    if (!finding.span) {
+    if (!finding.span || finding.redacted === false) {
       continue;
     }
 
@@ -54,10 +57,11 @@ function redactAny(
   findings: Finding[],
   config: RedactConfig,
   includeRaw: boolean,
+  policy: AllowPolicy,
   seen: WeakMap<object, unknown>
 ): unknown {
   if (typeof value === "string") {
-    const result = redactString(value, path, config, includeRaw);
+    const result = redactString(value, path, config, includeRaw, policy);
     findings.push(...result.findings);
     return result.value;
   }
@@ -75,9 +79,13 @@ function redactAny(
     seen.set(value, clone);
 
     if (clone.username !== "" || clone.password !== "") {
-      findings.push(...redactString(value.toString(), path, config, includeRaw).findings);
-      clone.username = replacementFor(value.username, "url-credentials", config.mode, config.replacement, config.tokenSalt);
-      clone.password = "";
+      const urlResult = redactString(value.toString(), path, config, includeRaw, policy);
+      findings.push(...urlResult.findings);
+
+      if (urlResult.findings.some((finding) => finding.type === "url-credentials" && finding.redacted !== false)) {
+        clone.username = replacementFor(value.username, "url-credentials", config.mode, config.replacement, config.tokenSalt);
+        clone.password = "";
+      }
     }
 
     return clone;
@@ -90,12 +98,16 @@ function redactAny(
     value.forEach((headerValue, headerName) => {
       const childPath = [...path, headerName];
       if (isSensitiveField(headerName, config.sensitiveFields)) {
-        findings.push(createFieldFinding(headerValue, childPath, includeRaw));
-        clone.set(headerName, replacementFor(headerValue, "sensitive-field", config.mode, config.replacement, config.tokenSalt));
-        return;
+        const allowed = isAllowedField(headerName, policy);
+        findings.push(createFieldFinding(headerValue, childPath, includeRaw, !allowed));
+
+        if (!allowed) {
+          clone.set(headerName, replacementFor(headerValue, "sensitive-field", config.mode, config.replacement, config.tokenSalt));
+          return;
+        }
       }
 
-      const result = redactString(headerValue, childPath, config, includeRaw);
+      const result = redactString(headerValue, childPath, config, includeRaw, policy);
       findings.push(...result.findings);
       clone.set(headerName, result.value);
     });
@@ -108,17 +120,17 @@ function redactAny(
     seen.set(value, clone);
     clone.name = value.name;
 
-    const message = redactString(value.message, [...path, "message"], config, includeRaw);
+    const message = redactString(value.message, [...path, "message"], config, includeRaw, policy);
     clone.message = message.value;
     findings.push(...message.findings);
 
     if (typeof value.stack === "string") {
-      const stack = redactString(value.stack, [...path, "stack"], config, includeRaw);
+      const stack = redactString(value.stack, [...path, "stack"], config, includeRaw, policy);
       clone.stack = stack.value;
       findings.push(...stack.findings);
     }
 
-    copyEnumerableProperties(value, clone, path, findings, config, includeRaw, seen);
+    copyEnumerableProperties(value, clone, path, findings, config, includeRaw, policy, seen);
     return clone;
   }
 
@@ -126,7 +138,7 @@ function redactAny(
     const clone: unknown[] = [];
     seen.set(value, clone);
     value.forEach((item, index) => {
-      clone[index] = redactAny(item, [...path, index], findings, config, includeRaw, seen);
+      clone[index] = redactAny(item, [...path, index], findings, config, includeRaw, policy, seen);
     });
     return clone;
   }
@@ -137,12 +149,16 @@ function redactAny(
   for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
     const childPath = [...path, key];
     if (isSensitiveField(key, config.sensitiveFields)) {
-      findings.push(createFieldFinding(child, childPath, includeRaw));
-      clone[key] = redactWhole(child, "sensitive-field", config);
-      continue;
+      const allowed = isAllowedField(key, policy);
+      findings.push(createFieldFinding(child, childPath, includeRaw, !allowed));
+
+      if (!allowed) {
+        clone[key] = redactWhole(child, "sensitive-field", config);
+        continue;
+      }
     }
 
-    clone[key] = redactAny(child, childPath, findings, config, includeRaw, seen);
+    clone[key] = redactAny(child, childPath, findings, config, includeRaw, policy, seen);
   }
 
   return clone;
@@ -198,17 +214,22 @@ function copyEnumerableProperties(
   findings: Finding[],
   config: RedactConfig,
   includeRaw: boolean,
+  policy: AllowPolicy,
   seen: WeakMap<object, unknown>
 ): void {
   for (const [key, child] of Object.entries(source as unknown as Record<string, unknown>)) {
     const childPath = [...path, key];
     if (isSensitiveField(key, config.sensitiveFields)) {
-      findings.push(createFieldFinding(child, childPath, includeRaw));
-      (target as unknown as Record<string, unknown>)[key] = redactWhole(child, "sensitive-field", config);
-      continue;
+      const allowed = isAllowedField(key, policy);
+      findings.push(createFieldFinding(child, childPath, includeRaw, !allowed));
+
+      if (!allowed) {
+        (target as unknown as Record<string, unknown>)[key] = redactWhole(child, "sensitive-field", config);
+        continue;
+      }
     }
 
-    (target as unknown as Record<string, unknown>)[key] = redactAny(child, childPath, findings, config, includeRaw, seen);
+    (target as unknown as Record<string, unknown>)[key] = redactAny(child, childPath, findings, config, includeRaw, policy, seen);
   }
 }
 

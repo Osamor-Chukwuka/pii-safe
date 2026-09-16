@@ -1,5 +1,6 @@
 import { builtInDetectors } from "../detectors/index.js";
 import { DEFAULT_REPLACEMENT } from "./defaults.js";
+import { mergeAllowPolicy } from "./policy.js";
 import { redactString, redactValue } from "./redact.js";
 import { createScanConfig, scanValue } from "./scan.js";
 import type { GuardOptions, PIIGuard, RedactOptions, RedactionReport, SanitizeResult, ScanOptions } from "./types.js";
@@ -24,7 +25,19 @@ export function createPIIGuard(options: GuardOptions = {}): PIIGuard {
       return this.redact(value, redactOptions);
     },
     sanitizeString(input: string, redactOptions?: RedactOptions): SanitizeResult<string> {
-      return redactString(input, [], { ...redactionConfig, ...redactOptions });
+      const config = {
+        ...redactionConfig,
+        mode: redactOptions?.mode ?? redactionConfig.mode,
+        replacement: redactOptions?.replacement ?? redactionConfig.replacement
+      };
+
+      return redactString(
+        input,
+        [],
+        config,
+        redactOptions?.includeRawFindings ?? redactionConfig.includeRawFindings,
+        mergeAllowPolicy(redactionConfig.allowPolicy, redactOptions)
+      );
     }
   };
 }

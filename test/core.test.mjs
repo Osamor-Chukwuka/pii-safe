@@ -52,6 +52,40 @@ test("supports deterministic tokenization", () => {
   assert.equal(two, one.split(" ")[0]);
 });
 
+test("supports allowlists for types, detectors, and fields", () => {
+  const guard = createPIIGuard();
+  const result = guard.sanitize(
+    {
+      email: "ada@example.com",
+      note: "email ada@example.com phone +1 415 555 2671",
+      auth: "Bearer abcdefghijklmnopqrstuvwxyz"
+    },
+    {
+      allowTypes: ["email"],
+      allowFields: ["email"],
+      allowDetectors: ["secrets"]
+    }
+  );
+
+  assert.equal(result.value.email, "ada@example.com");
+  assert.equal(result.value.note, "email ada@example.com phone [REDACTED]");
+  assert.equal(result.value.auth, "Bearer abcdefghijklmnopqrstuvwxyz");
+  assert.equal(result.findings.some((finding) => finding.type === "email" && finding.redacted === false), true);
+  assert.equal(result.findings.some((finding) => finding.type === "phone" && finding.redacted === true), true);
+  assert.equal(result.findings.some((finding) => finding.detector === "secrets" && finding.redacted === false), true);
+});
+
+test("requires field and type allowlists when a sensitive field contains detectable PII", () => {
+  const guard = createPIIGuard();
+  const fieldOnly = guard.sanitize({ email: "ada@example.com" }, { allowFields: ["email"] });
+  const typeOnly = guard.sanitize({ email: "ada@example.com" }, { allowTypes: ["email"] });
+  const both = guard.sanitize({ email: "ada@example.com" }, { allowFields: ["email"], allowTypes: ["email"] });
+
+  assert.equal(fieldOnly.value.email, "[REDACTED]");
+  assert.equal(typeOnly.value.email, "[REDACTED]");
+  assert.equal(both.value.email, "ada@example.com");
+});
+
 test("supports custom detectors and custom sensitive fields", () => {
   const employeeDetector = {
     id: "employee-id",

@@ -2,6 +2,31 @@ export type RedactionMode = "replace" | "mask" | "tokenize";
 
 export type PathSegment = string | number;
 
+export type BuiltInFindingType =
+  | "api-key"
+  | "bvn"
+  | "credit-card"
+  | "email"
+  | "ip-address"
+  | "jwt"
+  | "nin"
+  | "phone"
+  | "secret"
+  | "sensitive-field"
+  | "token"
+  | "url-credentials";
+
+export type BuiltInDetectorId =
+  | "credit-card"
+  | "email"
+  | "ip"
+  | "nigeria"
+  | "phone"
+  | "secrets";
+
+export type PIIType = BuiltInFindingType | (string & {});
+export type DetectorId = BuiltInDetectorId | (string & {});
+
 export interface Span {
   start: number;
   end: number;
@@ -12,6 +37,7 @@ export interface Finding {
   detector: string;
   path: string;
   confidence: number;
+  redacted?: boolean;
   span?: Span;
   length?: number;
   raw?: string;
@@ -43,10 +69,16 @@ export interface GuardOptions {
   replacement?: string;
   tokenSalt?: string;
   includeRawFindings?: boolean;
+  allowTypes?: PIIType[];
+  allowDetectors?: DetectorId[];
+  allowFields?: string[];
 }
 
 export interface ScanOptions {
   includeRawFindings?: boolean;
+  allowTypes?: PIIType[];
+  allowDetectors?: DetectorId[];
+  allowFields?: string[];
 }
 
 export interface RedactOptions extends ScanOptions {

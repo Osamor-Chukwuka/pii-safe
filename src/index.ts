@@ -14,11 +14,13 @@ export { createPinoSerializer, pinoPIIGuard } from "./integrations/pino.js";
 export { createWinstonRedactionFormat, redactWinstonInfo } from "./integrations/winston.js";
 export type {
   DetectorContext,
+  DetectorId,
   DetectorMatch,
   Finding,
   GuardOptions,
   PIIDetector,
   PIIGuard,
+  PIIType,
   RedactOptions,
   RedactionMode,
   RedactionReport,
