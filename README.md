@@ -99,6 +99,9 @@ const guard = createPIIGuard({
 | `sensitiveFields` | `string[]` | built-in list | Extra object field names to redact wholesale. |
 | `detectors` | `PIIDetector[]` | built-in detectors | Custom detectors appended after the built-ins. |
 | `includeRawFindings` | `boolean` | `false` | Whether findings may include raw matched values. |
+| `allowTypes` | `string[]` | `[]` | Finding types to detect but leave unredacted. |
+| `allowDetectors` | `string[]` | `[]` | Detector IDs to detect but leave unredacted. |
+| `allowFields` | `string[]` | `[]` | Sensitive field names to leave unredacted. |
 
 ## Redaction Modes
 
@@ -114,6 +117,59 @@ createPIIGuard({ mode: "tokenize", tokenSalt: "app-a" });
 ```
 
 Tokenization is deterministic for the same value, type, and salt. It is useful when you want to correlate repeated values without storing the original value.
+
+## Allowlists
+
+Sometimes an LLM call needs one identifier while everything else should still be redacted. For example, a search prompt may need an email address but not a phone number, token, or password.
+
+Use per-call allowlists:
+
+```ts
+const result = guard.sanitize(
+  {
+    email: "ada@example.com",
+    phone: "+1 415 555 2671",
+    token: "Bearer abcdefghijklmnopqrstuvwxyz"
+  },
+  {
+    allowTypes: ["email"],
+    allowFields: ["email"]
+  }
+);
+
+console.log(result.value);
+// {
+//   email: "ada@example.com",
+//   phone: "[REDACTED]",
+//   token: "[REDACTED]"
+// }
+```
+
+You can also set default allowlists on the guard:
+
+```ts
+const guard = createPIIGuard({
+  allowTypes: ["email"],
+  allowFields: ["email"]
+});
+```
+
+Allowlist controls:
+
+- `allowTypes`: allow a finding type, such as `email`, `iban`, or `npi`.
+- `allowDetectors`: allow everything from a detector, such as `email`, `finance`, or `health`.
+- `allowFields`: allow sensitive object fields by name, such as `email`.
+
+For object fields, you may need both field and type allowlists:
+
+```ts
+guard.sanitize(
+  { email: "ada@example.com" },
+  { allowFields: ["email"], allowTypes: ["email"] }
+);
+```
+
+Findings include `redacted: false` when a detected value was intentionally allowed.
 
 ## LLM Helpers
 
@@ -192,12 +248,19 @@ Built-in detectors are deterministic and local-only:
 - JWT
 - API keys and tokens
 - Nigerian BVN/NIN where context is strong enough
+- SSN
+- IBAN with checksum validation
+- context-labeled ABA routing numbers with checksum validation
+- NPI with checksum validation
+- context-labeled medical record numbers
 
 Sensitive field names are also redacted, including:
 
 ```txt
 email, phone, firstName, lastName, address, password, token, apiKey,
-authorization, cookie, dob, ssn, bvn, nin
+authorization, cookie, dob, ssn, bvn, nin, iban, routingNumber,
+accountNumber, bankAccount, npi, mrn, medicalRecordNumber, patientId,
+memberId, policyNumber
 ```
 
 Field-name detection redacts the whole field value:
@@ -288,6 +351,12 @@ Known limitations:
 - Nigerian BVN/NIN detection is conservative to avoid redacting every 11-digit number.
 - Phone detection may vary by region and formatting.
 - Secret detection is heuristic and may miss uncommon provider formats.
+- Some health and fintech identifiers need labels, field names, or checksums to avoid broad false positives.
+- Diagnoses, procedure descriptions, insurance context, and free-text medical details may require domain-specific NLP or application context.
+
+## Architecture
+
+For a deeper codebase map, see [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ## Contributing
 

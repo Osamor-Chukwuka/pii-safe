@@ -1,6 +1,6 @@
 {
   "name": "pii-safe",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "description": "Local-first PII redaction for LLM prompts, logs, and Node.js apps.",
   "type": "module",
   "main": "./dist/index.js",
@@ -14,6 +14,8 @@
   "files": [
     "dist",
     "README.md",
+    "ARCHITECTURE.md",
+    "CONTRIBUTING.md",
     "LICENSE"
   ],
   "scripts": {
@@ -65,7 +67,14 @@
     "email",
     "phone",
     "credit-card",
+    "fintech",
+    "healthcare",
     "luhn",
+    "iban",
+    "routing-number",
+    "ssn",
+    "npi",
+    "medical-record-number",
     "jwt",
     "api-key",
     "nigeria",
