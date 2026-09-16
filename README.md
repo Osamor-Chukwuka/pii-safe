@@ -1,6 +1,11 @@
 # pii-safe
 
+[![npm version](https://img.shields.io/npm/v/pii-safe.svg)](https://www.npmjs.com/package/pii-safe)
+[![GitHub](https://img.shields.io/badge/github-Osamor--Chukwuka%2Fpii--safe-181717.svg)](https://github.com/Osamor-Chukwuka/pii-safe)
+
 Local-first PII redaction for LLM prompts, logs, and Node.js apps.
+
+Links: [npm](https://www.npmjs.com/package/pii-safe) | [GitHub](https://github.com/Osamor-Chukwuka/pii-safe)
 
 ```bash
 npm install pii-safe
