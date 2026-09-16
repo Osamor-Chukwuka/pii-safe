@@ -3,13 +3,13 @@
 Local-first PII redaction for LLM prompts, logs, and Node.js apps.
 
 ```bash
-npm install pii-guard
+npm install @chukwuka_osamor/pii-guard
 ```
 
 ## Core API
 
 ```ts
-import { createPIIGuard } from "pii-guard";
+import { createPIIGuard } from "@chukwuka_osamor/pii-guard";
 
 const guard = createPIIGuard();
 
@@ -42,7 +42,7 @@ createPIIGuard({ mode: "tokenize", tokenSalt: "app-a" }); // [EMAIL:...]
 ## LLM Helpers
 
 ```ts
-import { sanitizeMessages, sanitizePrompt } from "pii-guard";
+import { sanitizeMessages, sanitizePrompt } from "@chukwuka_osamor/pii-guard";
 
 const prompt = sanitizePrompt("Email ada@example.com about this ticket");
 
@@ -54,7 +54,7 @@ const messages = sanitizeMessages([
 ## Generic Logger
 
 ```ts
-import { safeLogger } from "pii-guard";
+import { safeLogger } from "@chukwuka_osamor/pii-guard";
 
 const logger = safeLogger(console);
 
@@ -66,7 +66,7 @@ logger.error(new Error("Failed for ada@example.com"));
 
 ```ts
 import pino from "pino";
-import { pinoPIIGuard } from "pii-guard";
+import { pinoPIIGuard } from "@chukwuka_osamor/pii-guard";
 
 const logger = pino({
   ...pinoPIIGuard()
@@ -77,7 +77,7 @@ const logger = pino({
 
 ```ts
 import winston from "winston";
-import { createWinstonRedactionFormat } from "pii-guard";
+import { createWinstonRedactionFormat } from "@chukwuka_osamor/pii-guard";
 
 const logger = winston.createLogger({
   format: createWinstonRedactionFormat(winston.format),
