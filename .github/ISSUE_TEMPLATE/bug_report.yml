@@ -1,0 +1,40 @@
+name: Bug report
+description: Report a bug, missed redaction, or false positive.
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting this. Please do not include real PII, credentials, or secrets.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What happened?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: Use fake values only.
+      render: ts
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: pii-safe version
+      placeholder: "0.1.1"
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Node.js version, package manager, operating system.

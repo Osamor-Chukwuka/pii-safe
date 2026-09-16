@@ -132,3 +132,7 @@ const guard = createPIIGuard({
 ## Notes
 
 PII Guard handles strings, nested objects, arrays, `Error` objects, `Headers`, `URL` objects, request-like bodies, and log arguments without mutating the original input.
+
+## Contributing
+
+Contributions are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md) before opening an issue or pull request, and do not include real PII, credentials, or secrets in examples or tests.
